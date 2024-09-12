@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spinnen-Sichtung</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+    }
+
+    #countdown {
+      font-size: 3em;
+      margin: 20px;
+    }
+
+    #reset-section {
+      margin: 20px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 1em;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    #log {
+      margin-top: 30px;
+      text-align: left;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .log-entry {
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Spinnen-Sichtungs-Tracker</h1>
+  <div id="countdown">00:00:00</div>
+
+  <div id="reset-section">
+    <input type="text" id="nameInput" placeholder="Dein Name" required>
+    <br>
+    <button id="resetBtn">Sichtung Zurücksetzen</button>
+  </div>
+
+  <h2>Letzte 10 Sichtungen:</h2>
+  <div id="log"></div>
+
+  <script>
+    const countdownElement = document.getElementById('countdown');
+    const logElement = document.getElementById('log');
+    const nameInput = document.getElementById('nameInput');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let lastSighting = 0;
+    let logEntries = [];
+
+    // Lade die Daten von der API
+    async function loadData() {
+      try {
+        const response = await fetch('/api/data');
+        const data = await response.json();
+        lastSighting = new Date(data.lastSighting);
+        logEntries = data.log;
+        updateLog();
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+      }
+    }
+
+    // Aktualisiere den Countdown basierend auf der letzten Sichtung
+    function updateCountdown() {
+      const now = Date.now();
+      const diff = Math.floor((now - lastSighting) / 1000);
+
+      const hours = Math.floor(diff / 3600);
+      const minutes = Math.floor((diff % 3600) / 60);
+      const seconds = diff % 60;
+
+      countdownElement.innerText =
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0');
+    }
+
+    // Aktualisiere das Log
+    function updateLog() {
+      logElement.innerHTML = ''; // Log leeren
+
+      logEntries.forEach(entry => {
+        const logEntry = document.createElement('div');
+        logEntry.classList.add('log-entry');
+        logEntry.innerText = `${new Date(entry.time).toLocaleString()} - ${entry.name}`;
+        logElement.appendChild(logEntry);
+      });
+    }
+
+    // Countdown zurücksetzen
+    async function resetCountdown() {
+      const name = nameInput.value.trim();
+
+      if (name === '') {
+        alert('Bitte gib deinen Namen ein, um den Countdown zurückzusetzen!');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+        lastSighting = new Date(data.data.lastSighting);
+        logEntries = data.data.log;
+        updateLog();
+        nameInput.value = ''; // Name-Feld leeren
+      } catch (error) {
+        console.error('Fehler beim Zurücksetzen:', error);
+      }
+    }
+
+    resetBtn.addEventListener('click', resetCountdown);
+
+    // Countdown jede Sekunde aktualisieren
+    setInterval(updateCountdown, 1000);
+
+    // Daten beim Laden der Seite abrufen
+    loadData();
+  </script>
+
+</body>
+
+</html>
