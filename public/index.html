@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spinnen-Sichtung</title>
+  <title>Spinnen-Sichtungs-Tracker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,15 +28,30 @@
     button {
       padding: 10px 20px;
       font-size: 1em;
-      background-color: #28a745;
-      color: white;
+      margin-top: 10px;
       border: none;
       cursor: pointer;
-      margin-top: 10px;
     }
 
-    button:hover {
+    #resetBtn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    #resetBtn:hover {
       background-color: #218838;
+    }
+
+    #alarmBtn {
+      background-color: red;
+      color: white;
+      font-size: 1.5em;
+      margin-top: 20px;
+      padding: 15px 30px;
+    }
+
+    #alarmBtn:hover {
+      background-color: darkred;
     }
 
     #log {
@@ -52,9 +66,13 @@
       padding: 5px;
       border-bottom: 1px solid #ccc;
     }
+
+    .alarm-mode {
+      background-color: red;
+      color: white;
+    }
   </style>
 </head>
-
 <body>
 
   <h1>Spinnen-Sichtungs-Tracker</h1>
@@ -64,95 +82,124 @@
     <input type="text" id="nameInput" placeholder="Dein Name" required>
     <br>
     <button id="resetBtn">Sichtung Zurücksetzen</button>
+    <button id="alarmBtn">DIE SPINNE IST WEG AHHH</button>
   </div>
 
   <h2>Letzte 10 Sichtungen:</h2>
   <div id="log"></div>
 
   <script>
-    const countdownElement = document.getElementById('countdown');
-    const logElement = document.getElementById('log');
-    const nameInput = document.getElementById('nameInput');
-    const resetBtn = document.getElementById('resetBtn');
+  const countdownElement = document.getElementById('countdown');
+  const logElement = document.getElementById('log');
+  const nameInput = document.getElementById('nameInput');
+  const resetBtn = document.getElementById('resetBtn');
+  const alarmBtn = document.getElementById('alarmBtn');
+  let lastSighting = 0;
+  let logEntries = [];
 
-    let lastSighting = 0;
-    let logEntries = [];
+  // Lade die Daten von der API
+  async function loadData() {
+    try {
+      const response = await fetch('/api/data');
+      const data = await response.json();
+      lastSighting = new Date(data.lastSighting);
+      logEntries = data.log;
+      updateLog();
+    } catch (error) {
+      console.error('Fehler beim Laden der Daten:', error);
+    }
+  }
 
-    // Lade die Daten von der API
-    async function loadData() {
-      try {
-        const response = await fetch('/api/data');
-        const data = await response.json();
-        lastSighting = new Date(data.lastSighting);
-        logEntries = data.log;
-        updateLog();
-      } catch (error) {
-        console.error('Fehler beim Laden der Daten:', error);
+  // Überprüfe den Alarmstatus beim Laden der Seite
+  async function checkAlarmStatus() {
+    try {
+      const response = await fetch('/api/alarm-status');
+      const data = await response.json();
+      if (data.alarmActive) {
+        activateAlarmMode();  // Alarmmodus aktivieren, wenn der Alarmstatus aktiv ist
       }
+    } catch (error) {
+      console.error('Fehler beim Laden des Alarmstatus:', error);
+    }
+  }
+
+  // Aktualisiere den Countdown basierend auf der letzten Sichtung
+  function updateCountdown() {
+    const now = Date.now();
+    const diff = Math.floor((now - lastSighting) / 1000);
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    countdownElement.innerText = 
+      String(hours).padStart(2, '0') + ':' + 
+      String(minutes).padStart(2, '0') + ':' + 
+      String(seconds).padStart(2, '0');
+  }
+
+  // Aktualisiere das Log
+  function updateLog() {
+    logElement.innerHTML = ''; // Log leeren
+
+    logEntries.forEach(entry => {
+      const logEntry = document.createElement('div');
+      logEntry.classList.add('log-entry');
+      logEntry.innerText = `${new Date(entry.time).toLocaleString()} - ${entry.name}`;
+      logElement.appendChild(logEntry);
+    });
+  }
+
+  // Countdown zurücksetzen
+  async function resetCountdown() {
+    const name = nameInput.value.trim();
+
+    if (name === '') {
+      alert('Bitte gib deinen Namen ein, um den Countdown zurückzusetzen!');
+      return;
     }
 
-    // Aktualisiere den Countdown basierend auf der letzten Sichtung
-    function updateCountdown() {
-      const now = Date.now();
-      const diff = Math.floor((now - lastSighting) / 1000);
-
-      const hours = Math.floor(diff / 3600);
-      const minutes = Math.floor((diff % 3600) / 60);
-      const seconds = diff % 60;
-
-      countdownElement.innerText =
-        String(hours).padStart(2, '0') + ':' +
-        String(minutes).padStart(2, '0') + ':' +
-        String(seconds).padStart(2, '0');
-    }
-
-    // Aktualisiere das Log
-    function updateLog() {
-      logElement.innerHTML = ''; // Log leeren
-
-      logEntries.forEach(entry => {
-        const logEntry = document.createElement('div');
-        logEntry.classList.add('log-entry');
-        logEntry.innerText = `${new Date(entry.time).toLocaleString()} - ${entry.name}`;
-        logElement.appendChild(logEntry);
+    try {
+      const response = await fetch('/api/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
       });
+
+      const data = await response.json();
+      lastSighting = new Date(data.data.lastSighting);
+      logEntries = data.data.log;
+      updateLog();
+      nameInput.value = ''; // Name-Feld leeren
+    } catch (error) {
+      console.error('Fehler beim Zurücksetzen:', error);
     }
+  }
 
-    // Countdown zurücksetzen
-    async function resetCountdown() {
-      const name = nameInput.value.trim();
+  // Alarmmodus aktivieren
+  function activateAlarmMode() {
+    document.body.classList.add('alarm-mode');  // Roten Hintergrund und Alarm aktivieren
+    alert('SPINNEN-ALARM! Die Seite befindet sich im Alarmmodus!');
+  }
 
-      if (name === '') {
-        alert('Bitte gib deinen Namen ein, um den Countdown zurückzusetzen!');
-        return;
-      }
+  // Trigger Alarm
+  async function triggerAlarm() {
+    activateAlarmMode();  // Seite direkt in den Alarmmodus versetzen
 
-      try {
-        const response = await fetch('/api/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-
-        const data = await response.json();
-        lastSighting = new Date(data.data.lastSighting);
-        logEntries = data.data.log;
-        updateLog();
-        nameInput.value = ''; // Name-Feld leeren
-      } catch (error) {
-        console.error('Fehler beim Zurücksetzen:', error);
-      }
+    try {
+      await fetch('/api/trigger-alarm', { method: 'POST' });
+    } catch (error) {
+      console.error('Fehler beim Auslösen des Alarms:', error);
     }
+  }
 
-    resetBtn.addEventListener('click', resetCountdown);
+  resetBtn.addEventListener('click', resetCountdown);
+  alarmBtn.addEventListener('click', triggerAlarm);
 
-    // Countdown jede Sekunde aktualisieren
-    setInterval(updateCountdown, 1000);
-
-    // Daten beim Laden der Seite abrufen
-    loadData();
-  </script>
+  loadData();
+  checkAlarmStatus();  // Überprüfe den Alarmstatus beim Laden der Seite
+  setInterval(updateCountdown, 1000);
+</script>
 
 </body>
-
 </html>
