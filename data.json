@@ -1,5 +1,5 @@
 {
-  "lastSighting": 1726136732280,
+  "lastSighting": 1726133788000,
   "log": [
     {
       "time": "2024-09-12T10:25:32.280Z",
@@ -17,6 +17,5 @@
       "time": "2024-09-12T08:43:41.776Z",
       "name": "Simon"
     }
-  ],
-  "alarmActive": false
+  ]
 }
