@@ -55,24 +55,15 @@
 </head>
 <body>
 
-  <h1>Spinnen-Sichtungs-Tracker</h1>
-  <p> <i> Ist die Spinne noch Da? </i> </p>
+  <h1>Zeit, seit dem wieder Frieden in das Land der Steves gekehrt ist</h1>
   <div id="countdown">00:00:00</div>
 
-  <div id="reset-section">
-    <input type="text" id="nameInput" placeholder="Dein Name" required>
-    <br>
-    <button id="resetBtn">noch Da!</button>
-  </div>
-
-  <h2>Letzte 10 Sichtungen:</h2>
+  <h2>Die letzten bekannten Sichtungen des Monsters:</h2>
   <div id="log"></div>
 
   <script>
     const countdownElement = document.getElementById('countdown');
     const logElement = document.getElementById('log');
-    const nameInput = document.getElementById('nameInput');
-    const resetBtn = document.getElementById('resetBtn');
 
     let lastSighting = 0;
     let logEntries = [];
@@ -116,34 +107,6 @@
         logElement.appendChild(logEntry);
       });
     }
-
-    // Countdown zurücksetzen
-    async function resetCountdown() {
-      const name = nameInput.value.trim();
-
-      if (name === '') {
-        alert('Bitte gib deinen Namen ein, um den Countdown zurückzusetzen!');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-
-        const data = await response.json();
-        lastSighting = new Date(data.data.lastSighting);
-        logEntries = data.data.log;
-        updateLog();
-        nameInput.value = ''; // Name-Feld leeren
-      } catch (error) {
-        console.error('Fehler beim Zurücksetzen:', error);
-      }
-    }
-
-    resetBtn.addEventListener('click', resetCountdown);
 
     // Countdown jede Sekunde aktualisieren
     setInterval(updateCountdown, 1000);
